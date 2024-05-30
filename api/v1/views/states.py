@@ -45,9 +45,15 @@ def create_obj():
     """ create new instance """
     if not request.is_json:
         return make_response(jsonify({"error": "Not a JSON"}), 400)
-    data = request.get_json()
+    
+    try:
+        data = request.get_json()
+    except Exception:
+        return make_response(jsonify({"error": "Not a JSON"}), 400)
+    
     if 'name' not in data:
         return make_response(jsonify({"error": "Missing name"}), 400)
+    
     obj = State(**data)
     obj.save()
     return jsonify(obj.to_dict()), 201
@@ -56,16 +62,23 @@ def create_obj():
 @app_views.route('/states/<string:state_id>', methods=['PUT'],
                  strict_slashes=False)
 @swag_from('documentation/state/put.yml', methods=['PUT'])
-def post_method(state_id):
-    """ post method """
-    if not request.get_json():
+def update_method(state_id):
+    """ update method """
+    if not request.is_json:
         return make_response(jsonify({"error": "Not a JSON"}), 400)
+    
+    try:
+        data = request.get_json()
+    except Exception:
+        return make_response(jsonify({"error": "Not a JSON"}), 400)
+    
     obj = storage.get(State, state_id)
     if obj is None:
         abort(404)
-    for key, value in request.get_json().items():
-        if key not in ['id', 'created_at', 'updated']:
+    
+    for key, value in data.items():
+        if key not in ['id', 'created_at', 'updated_at']:
             setattr(obj, key, value)
-    storage.save()
+    obj.save()
     return jsonify(obj.to_dict())
 
