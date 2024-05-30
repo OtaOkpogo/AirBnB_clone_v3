@@ -4,7 +4,6 @@ Contains the FileStorage class
 """
 
 import json
-import models
 from models.amenity import Amenity
 from models.base_model import BaseModel
 from models.city import City
@@ -12,7 +11,6 @@ from models.place import Place
 from models.review import Review
 from models.state import State
 from models.user import User
-from hashlib import md5
 
 classes = {"Amenity": Amenity, "BaseModel": BaseModel, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
@@ -46,9 +44,7 @@ class FileStorage:
         """serializes __objects to the JSON file (path: __file_path)"""
         json_objects = {}
         for key in self.__objects:
-            if key == "password":
-                json_objects[key].decode()
-            json_objects[key] = self.__objects[key].to_dict(save_fs=1)
+            json_objects[key] = self.__objects[key].to_dict()
         with open(self.__file_path, 'w') as f:
             json.dump(json_objects, f)
 
@@ -68,38 +64,27 @@ class FileStorage:
             key = obj.__class__.__name__ + '.' + obj.id
             if key in self.__objects:
                 del self.__objects[key]
+    def get(self, cls, id):
+        """Returns the object based on the class and its ID, or None if not found"""
+        cls_name = cls if isinstance(cls, str) else cls.__name__
+        if cls_name in classes:
+            key = cls_name + "." + id
+            return self.__objects.get(key, None) # This is used to retrieve key in dictionary else return None.
+        return None 
 
+    def count(self, cls=None):
+        count = 0
+        if cls is None:
+            for key in self.__objects:
+                count += 1
+        else:
+            cls_name = cls if isinstance(cls, str) else cls.__name__
+            if cls_name in classes:
+               for key in self.__objects:
+                    key_cls_name = key.split('.')[0]
+                    if cls_name is None or key_cls_name == cls_name:
+                        count += 1
+        return count
     def close(self):
         """call reload() method for deserializing the JSON file to objects"""
         self.reload()
-
-    def get(self, cls, id):
-        """
-        Returns the object based on the class name and its ID, or
-        None if not found
-        """
-        if cls not in classes.values():
-            return None
-
-        all_cls = models.storage.all(cls)
-        for value in all_cls.values():
-            if (value.id == id):
-                return value
-
-        return None
-
-    def count(self, cls=None):
-        """
-        count the number of objects in storage
-        """
-        all_class = classes.values()
-
-        if not cls:
-            count = 0
-            for clas in all_class:
-                count += len(models.storage.all(clas).values())
-        else:
-            count = len(models.storage.all(cls).values())
-
-        return count
-    
